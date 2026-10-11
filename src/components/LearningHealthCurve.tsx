@@ -20,28 +20,54 @@ import {
   ReferenceDot
 } from "recharts";
 import GlassCard from "./GlassCard";
-import { performanceData } from "../data/mock";
-
-// Calculate composite health score for each week:
-// Weighted composite index: Attendance 35%, Quiz 45%, Assignment 20%
-const healthCurveData = performanceData.map((item, idx) => {
-  const compositeScore = Math.round(
-    item.attendance * 0.35 + item.quiz * 0.45 + item.assignment * 0.20
-  );
-  
-  // Event signal markers based on real performance milestones
-  let eventMarker: string | null = null;
-  if (idx === 1) eventMarker = "Attendance drop";
-  if (idx === 3) eventMarker = "Quiz drop";
-
-  return {
-    ...item,
-    healthScore: compositeScore,
-    eventMarker,
-  };
-});
+import { performanceData as defaultPerformanceData } from "../data/mock";
+import { useCampus } from "../context/CampusContext";
 
 export default function LearningHealthCurve() {
+  const { currentUser, students } = useCampus();
+  const currentStudent = (currentUser?.role === "student" ? (currentUser as any) : null) || students.find(s => s.id === currentUser?.id) || students[0];
+
+  const studentPerf = currentStudent ? [
+    {
+      week: "Week 1",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.05)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 1.02)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.03))
+    },
+    {
+      week: "Week 2",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 1.02)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.98)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 1.01))
+    },
+    {
+      week: "Week 3",
+      quiz: Math.min(100, Math.round((currentStudent.quizAverage || 75) * 0.95)),
+      assignment: Math.min(100, Math.round((currentStudent.assignmentAverage || 80) * 0.96)),
+      attendance: Math.min(100, Math.round((currentStudent.attendancePercent || 82) * 0.98))
+    },
+    {
+      week: "Week 4",
+      quiz: currentStudent.quizAverage || 75,
+      assignment: currentStudent.assignmentAverage || 80,
+      attendance: currentStudent.attendancePercent || 82
+    }
+  ] : defaultPerformanceData;
+
+  const healthCurveData = studentPerf.map((item, idx) => {
+    const compositeScore = Math.round(
+      item.attendance * 0.35 + item.quiz * 0.45 + item.assignment * 0.20
+    );
+    let eventMarker: string | null = null;
+    if (idx === 1) eventMarker = "Attendance drop";
+    if (idx === 3) eventMarker = "Quiz drop";
+    return {
+      ...item,
+      healthScore: compositeScore,
+      eventMarker,
+    };
+  });
+
   // Current score is the latest week (Week 4), previous is Week 1
   const latestPoint = healthCurveData[healthCurveData.length - 1];
   const initialPoint = healthCurveData[0];
@@ -197,13 +223,13 @@ export default function LearningHealthCurve() {
           </div>
 
           {/* Event Signal Legend Footer */}
-          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-[11px] font-semibold text-slate-500">
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-4 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-white dark:border-slate-900" />
               <span>Week 2: Attendance drop</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white" />
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-white dark:border-slate-900" />
               <span>Week 4: Quiz drop</span>
             </div>
           </div>
@@ -226,7 +252,7 @@ export default function LearningHealthCurve() {
 
             {/* List of significant metric shifts */}
             <div className="space-y-3 mb-5">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -235,7 +261,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Quiz performance
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">Assessment score drop</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Assessment score drop</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -243,7 +269,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -252,7 +278,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Assignment avg
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">2 late submissions</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">2 late submissions</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -260,7 +286,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 dark:bg-sky-950 dark:text-sky-400 flex items-center justify-center shrink-0">
                     <ArrowDownRight className="w-4 h-4" />
@@ -269,7 +295,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       Attendance rate
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">68% current rate</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">68% current rate</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-sky-600 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-2 py-1 rounded-lg">
@@ -277,7 +303,7 @@ export default function LearningHealthCurve() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 shadow-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <ArrowUpRight className="w-4 h-4" />
@@ -286,7 +312,7 @@ export default function LearningHealthCurve() {
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block leading-tight">
                       SQL practice
                     </span>
-                    <span className="text-[10px] font-medium text-slate-500">AI Tutor sessions</span>
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">AI Tutor sessions</span>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-1 rounded-lg">

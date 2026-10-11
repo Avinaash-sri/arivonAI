@@ -246,4 +246,207 @@ export interface StudentIntelligence {
   journey: StudentJourneyEvent[];
   recommendedInterventions: Intervention[];
   interventionHistory: InterventionRecord[];
+  
+  // Hackathon Extended Analytics Models
+  placementReadiness?: PlacementReadiness;
+  lmsActivity?: LMSActivityMetrics;
+  skillsAndFeedback?: SkillsAndFeedback;
+  campusEngagement?: CampusEngagement;
+  successScoreResult?: StudentSuccessScoreResult;
+  explainableRisks?: ExplainableRiskFlag[];
+  segmentation?: StudentSegmentationResult;
 }
+
+// -------------------------------------------------------------
+// HACKATHON SMART CAMPUS ANALYTICS TYPES
+// -------------------------------------------------------------
+
+export interface PlacementReadiness {
+  aptitudeScore: number | null; // 0-100
+  codingScore: number | null;   // 0-100
+  mockInterviewScore: number | null; // 0-100
+  resumeStatus: "not_started" | "in_progress" | "verified";
+  placementAssessmentsCompleted: number;
+  preparationProgressPercent: number; // 0-100
+  overallPlacementScore: number; // 0-100
+  status: "ready" | "needs_preparation" | "incomplete";
+}
+
+export interface LMSActivityMetrics {
+  totalLogins: number;
+  assignmentsSubmitted: number;
+  assignmentCompletionRate: number; // 0-100%
+  activeDaysLast30: number;
+  averageSessionDurationMins: number;
+  lastLoginDate: string;
+  lmsScore: number; // 0-100
+}
+
+export interface SkillsAndFeedback {
+  technicalSkills: { name: string; score: number }[];
+  assessmentsPassedCount: number;
+  facultyFeedbackCount: number;
+  recentFacultyNotes?: string;
+  skillsScore: number; // 0-100
+}
+
+export interface CampusEngagement {
+  eventsAttendedCount: number;
+  clubParticipationsCount: number;
+  hackathonsCount: number;
+  certificationsCount: number;
+  engagementScore: number; // 0-100
+}
+
+export interface ExplainableRiskFlag {
+  id: string;
+  category: "Academic" | "Attendance" | "Placement Readiness" | "Engagement";
+  severity: "Low" | "Medium" | "High";
+  title: string;
+  reason: string;
+  supportingData: string;
+  relevantDates: string;
+  recommendedAction: string;
+  isRuleBasedWarning: boolean;
+}
+
+export interface CategoryScoreDetail {
+  category: string;
+  label: string;
+  score: number | null;
+  normalizedScore: number;
+  configuredWeight: number;
+  reNormalizedWeight: number;
+  hasValidData: boolean;
+  supportingMetric: string;
+}
+
+export interface StudentSuccessScoreResult {
+  overallScore: number | null;
+  hasSufficientData: boolean;
+  dataCoveragePercent: number;
+  applicableWeightsTotal: number;
+  validCategoriesCount: number;
+  totalCategoriesCount: number;
+  statusLabel: string;
+  categoryScores: Record<string, CategoryScoreDetail>;
+  explanation: {
+    positiveDrivers: string[];
+    attentionAreas: string[];
+  };
+  lastUpdated: string;
+}
+
+export interface StudentInterventionItem {
+  id: string;
+  studentId: string;
+  studentName: string;
+  category:
+    | "Academic Mentoring"
+    | "Attendance Counselling"
+    | "Assignment Completion Support"
+    | "Aptitude Practice"
+    | "Coding Practice"
+    | "Mock Interview Prep";
+  subject?: string;
+  priority?: "High" | "Medium" | "Low";
+  recommendation: string;
+  notes: string;
+  assignedFaculty: string;
+  dueDate: string;
+  status: "Open" | "In Progress" | "Completed" | "Dismissed";
+  outcomeNotes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StudentSegmentationResult {
+  primarySegment: string;
+  qualifyingSegments: string[];
+  reasoning: string;
+  badgeColor: string;
+}
+
+// -------------------------------------------------------------
+// 7 OFFICIAL HACKATHON DATA CATEGORIES & INTEGRATION STATUS
+// -------------------------------------------------------------
+
+export interface AcademicRecordData {
+  cgpa: number;
+  semesterGpa: number;
+  quizAverage: number;
+  assignmentAverage: number;
+  examsAverage: number;
+  backlogsCount: number;
+  subjectWiseMarks: Array<{ subject: string; marks: number; maxMarks: number; grade: string }>;
+  trend: "improving" | "stable" | "declining";
+}
+
+export interface AttendanceRecordData {
+  overallPercentage: number;
+  subjectWiseAttendance: Array<{ subject: string; attendedHours: number; totalHours: number; percentage: number }>;
+  shortageAgainstThreshold: number;
+  trend: "improving" | "stable" | "declining";
+}
+
+export interface LMSActivityData {
+  loginFrequencyPerWeek: number;
+  totalLogins: number;
+  assignmentCompletionRate: number;
+  assignmentsSubmitted: number;
+  totalAssignments: number;
+  activeDaysLast30: number;
+  courseProgressPercent: number;
+}
+
+export interface StudentEngagementData {
+  eventsAttendedCount: number;
+  clubParticipationsCount: number;
+  hackathonsCount: number;
+  certificationsCount: number;
+  extracurricularPoints: number;
+}
+
+export interface PlacementReadinessData {
+  aptitudeScore: number | null;
+  codingScore: number | null;
+  mockInterviewScore: number | null;
+  resumeVerified: boolean;
+  preparationProgressPercent: number;
+  status: "Placement-Ready" | "Preparation Needed" | "Not Started";
+}
+
+export interface SkillsAssessmentData {
+  technicalSkills: Array<{ name: string; rating: number; verified: boolean }>;
+  softSkills: Array<{ name: string; rating: number }>;
+  assessmentsPassedCount: number;
+  verifiedRatingsCount: number;
+}
+
+export interface StudentFeedbackData {
+  satisfactionRating: number;
+  facultyFeedbackNotes: string;
+  supportInterventionFeedback: string;
+  lastFeedbackDate: string;
+}
+
+export interface DataCategoryStatus {
+  id: string;
+  categoryName: string;
+  status: "Connected" | "Partial" | "Demo Data" | "Disconnected";
+  recordCount: number;
+  lastUpdated: string;
+  missingFields: string[];
+  healthScore: number;
+  description: string;
+}
+
+export interface DataIntegrationOverview {
+  overallHealthScore: number;
+  connectedCategoriesCount: number;
+  totalCategoriesCount: number;
+  totalRecordsIngested: number;
+  categories: DataCategoryStatus[];
+  lastSyncTime: string;
+}
+

@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { useCampus } from "../context/CampusContext";
 import { useSettings } from "../context/SettingsContext";
+import { useLearning } from "../context/LearningContext";
+import { getFrameById } from "../data/avatarFramesData";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
@@ -29,18 +32,19 @@ function Toggle({ id, checked, onChange, label }: ToggleProps) {
   return (
     <button
       id={id}
+      type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5.5 rounded-full transition-colors ${
-        checked ? "bg-indigo-500" : "bg-slate-200 dark:bg-slate-700"
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+        checked ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
       }`}
-      style={{ minWidth: "40px", height: "22px" }}
     >
       <span
-        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-[19px]" : "translate-x-0.5"
+        aria-hidden="true"
+        className={`pointer-events-none absolute top-0.5 left-0.5 inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+          checked ? "translate-x-5" : "translate-x-0"
         }`}
       />
     </button>
@@ -105,6 +109,8 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 export default function SettingsPage() {
   const { currentUser, updateProfile } = useCampus();
   const { settings, updateSettings, playSound } = useSettings();
+  const { profile } = useLearning();
+  const equippedFrame = getFrameById(profile?.frameId);
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState("");
@@ -146,12 +152,36 @@ export default function SettingsPage() {
       setPasswordError("New passwords do not match.");
       return;
     }
-    // Mock save
-    setTimeout(() => {
-      setPasswordSuccess(true);
-      playSound("success");
-      setTimeout(() => setActiveModal(null), 1500);
-    }, 500);
+    
+    if (isSupabaseConfigured()) {
+      supabase.auth.updateUser({ password: newPassword }).then(({ error }) => {
+        if (error) {
+          setPasswordError(error.message);
+        } else {
+          setPasswordSuccess(true);
+          playSound("success");
+          setTimeout(() => {
+            setActiveModal(null);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+          }, 1500);
+        }
+      }).catch((err: any) => {
+        setPasswordError(err.message || "Failed to update password");
+      });
+    } else {
+      setTimeout(() => {
+        setPasswordSuccess(true);
+        playSound("success");
+        setTimeout(() => {
+          setActiveModal(null);
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        }, 1500);
+      }, 500);
+    }
   }
 
   if (!currentUser) return null;
@@ -165,8 +195,13 @@ export default function SettingsPage() {
         {/* Profile card */}
         <GlassCard className="mb-5">
           <div className="flex items-start sm:items-center flex-col sm:flex-row gap-4">
-            <div className="w-14 h-14 rounded-2xl primary-gradient flex items-center justify-center text-white text-xl font-bold shrink-0 shadow-lg">
-              {currentUser.name.split(" ").map((n) => n[0]).join("").substring(0,2)}
+            <div className="relative shrink-0">
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black transition-all ${equippedFrame.ringClasses} ${equippedFrame.avatarBg}`}>
+                {currentUser.name.split(" ").map((n) => n[0]).join("").substring(0,2)}
+              </div>
+              <div className="absolute -bottom-1.5 -right-1.5 text-base bg-white dark:bg-slate-800 rounded-full p-0.5 shadow-md border border-slate-200 dark:border-slate-700 select-none">
+                {equippedFrame.emoji}
+              </div>
             </div>
             
             <div className="flex-1 w-full min-w-0">
@@ -209,12 +244,16 @@ export default function SettingsPage() {
                     {currentUser.department || "No department specified"} 
                     {currentUser.role === 'student' && (currentUser as any).year ? ` • ${(currentUser as any).year}` : ''}
                   </p>
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <span className="inline-block text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 rounded-full px-2 py-0.5">
                       {currentUser.role} Account
                     </span>
                     <span className="inline-block text-[10px] uppercase font-bold text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-full px-2 py-0.5">
                       ID: {currentUser.id}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-full px-2.5 py-0.5">
+                      <span>{equippedFrame.emoji}</span>
+                      <span>Frame: {equippedFrame.name}</span>
                     </span>
                   </div>
                 </>
@@ -291,7 +330,19 @@ export default function SettingsPage() {
             description="Deadlines, quiz reminders"
             toggle
             checked={settings.pushNotificationsEnabled}
-            onToggle={(val) => updateSettings({ pushNotificationsEnabled: val })}
+            onToggle={async (val) => {
+              updateSettings({ pushNotificationsEnabled: val });
+              if (val) {
+                playSound("notification");
+                if ("Notification" in window && Notification.permission === "default") {
+                  try {
+                    await Notification.requestPermission();
+                  } catch (e) {
+                    console.warn("Notification permission error:", e);
+                  }
+                }
+              }
+            }}
             toggleId="toggle-notifications"
           />
           <SettingRow
@@ -315,8 +366,7 @@ export default function SettingsPage() {
             onToggle={(val) => {
               updateSettings({ soundEffectsEnabled: val });
               if (val) {
-                // Manually play sound to demonstrate it turning on
-                console.log("[Sound System] Playing success sound.");
+                playSound("success");
               }
             }}
             toggleId="toggle-sounds"
@@ -330,7 +380,7 @@ export default function SettingsPage() {
         </GlassCard>
 
         <p className="text-center text-xs text-slate-400 mt-6 pb-4">
-          CampusOS AI v2.0 · Settings synchronized
+          ARIVON AI v2.0 · Students Analytics · Settings synchronized
         </p>
       </div>
 

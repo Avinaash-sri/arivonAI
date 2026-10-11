@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Search, FileText, ExternalLink, ThumbsUp, ThumbsDown, BookOpen } from "lucide-react";
 import { knowledgeAnswer } from "../data/mock";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { saveFeedbackToDB } from "../services/supabaseService";
 import MobileHeader from "../components/MobileHeader";
 import PageHeader from "../components/PageHeader";
 import GlassCard from "../components/GlassCard";
@@ -9,6 +11,18 @@ export default function KnowledgePage() {
   const [query, setQuery] = useState(knowledgeAnswer.query);
   const [showAnswer, setShowAnswer] = useState(true);
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+
+  function handleFeedback(type: "up" | "down") {
+    setFeedback(type);
+    if (isSupabaseConfigured()) {
+      saveFeedbackToDB({
+        id: `fb-${Date.now()}`,
+        category: "Knowledge Base",
+        text: `Knowledge query: "${query}" - Feedback: ${type}`,
+        createdAt: new Date().toISOString()
+      }).catch(console.error);
+    }
+  }
 
   function handleSearch() {
     if (query.trim()) setShowAnswer(true);
@@ -156,7 +170,7 @@ export default function KnowledgePage() {
                 Was this helpful?
               </span>
               <button
-                onClick={() => setFeedback("up")}
+                onClick={() => handleFeedback("up")}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition min-h-[36px] ${
                   feedback === "up"
                     ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
@@ -169,7 +183,7 @@ export default function KnowledgePage() {
                 👍
               </button>
               <button
-                onClick={() => setFeedback("down")}
+                onClick={() => handleFeedback("down")}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition min-h-[36px] ${
                   feedback === "down"
                     ? "bg-red-100 text-red-700 border border-red-200"
